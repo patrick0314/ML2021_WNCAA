@@ -14,7 +14,7 @@ for i in range(len(compactresult)):
     L = team.index[team['TeamID']==compactresult['LTeamID'][i]].to_list()
     VS[W[0], L[0]] += 1
 regularcompactresult = RegularCompactResult() # [112183, 8] = [Season, DayNum, WteamID, WScore, LteamID, LScore, WLoc, NumOT]
-for i in range(len(regularcompactresult)):
+for i in range(len(regularcompactresult) * 2 // 3):
     W = team.index[team['TeamID']==regularcompactresult['WTeamID'][i]].to_list()
     L = team.index[team['TeamID']==regularcompactresult['LTeamID'][i]].to_list()
     VS[W[0], L[0]] += 1
@@ -23,11 +23,14 @@ for i in range(len(detailedresult)):
     W = team.index[team['TeamID']==detailedresult['WTeamID'][i]].to_list()
     L = team.index[team['TeamID']==detailedresult['LTeamID'][i]].to_list()
     VS[W[0], L[0]] += 1
+'''
 regulardetailedresult = RegularDetailedResult() # [56793, 34]
 for i in range(len(regulardetailedresult)):
     W = team.index[team['TeamID']==regulardetailedresult['WTeamID'][i]].to_list()
     L = team.index[team['TeamID']==regulardetailedresult['LTeamID'][i]].to_list()
     VS[W[0], L[0]] += 1
+'''
+
 for i in range(VS.shape[0]):
     for j in range(i+1, VS.shape[1]):
         tmp = VS[i, j] + VS[j, i]
