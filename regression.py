@@ -3,13 +3,24 @@ import pandas as pd
 import random
 
 # Read Data
+print('=== ReadData ===')
 prefix = 'Data/'
 dt = {'WTeamID':'str', 'LTeamID':'str'}
 ss = pd.read_csv(prefix + 'WSampleSubmissionStage1.csv')
-sd = pd.read_csv(prefix + 'WRegularSeasonCompactResults.csv', dtype=dt)
-td = pd.read_csv(prefix + 'WNCAATourneyCompactResults.csv', dtype=dt)
+sd1 = pd.read_csv(prefix + 'WRegularSeasonCompactResults.csv', dtype=dt)
+sd2 = pd.read_csv(prefix + 'WRegularSeasonDetailedResults.csv', dtype=dt)
+sd2 = sd2.drop(['WFGM', 'WFGA', 'WFGM3', 'WFGA3', 'WFTM', 'WFTA', 'WOR', 'WDR', 'WAst', 'WTO', 'WStl', 'WBlk', 'WPF'], axis=1)
+sd2 = sd2.drop(['LFGM', 'LFGA', 'LFGM3', 'LFGA3', 'LFTM', 'LFTA', 'LOR', 'LDR', 'LAst', 'LTO', 'LStl', 'LBlk', 'LPF'], axis=1)
+sd = pd.concat([sd1, sd2], axis=0, ignore_index=True)
+td1 = pd.read_csv(prefix + 'WNCAATourneyCompactResults.csv', dtype=dt)
+td2 = pd.read_csv(prefix + 'WNCAATourneyDetailedResults.csv', dtype=dt)
+td2 = td2.drop(['WFGM', 'WFGA', 'WFGM3', 'WFGA3', 'WFTM', 'WFTA', 'WOR', 'WDR', 'WAst', 'WTO', 'WStl', 'WBlk', 'WPF'], axis=1)
+td2 = td2.drop(['LFGM', 'LFGA', 'LFGM3', 'LFGA3', 'LFTM', 'LFTA', 'LOR', 'LDR', 'LAst', 'LTO', 'LStl', 'LBlk', 'LPF'], axis=1)
+td = pd.concat([td1, td2], axis=0, ignore_index=True)
 ts = pd.read_csv(prefix + 'WNCAATourneySeeds.csv', dtype={'TeamID':'str'})
 
+# Dataframe  formation with feature engineering
+print('=== Feature Engineering ===')
 ts['Seed'] = ts['Seed'].map(lambda s: s[1:])
 sd['DScore'] = sd['WScore'] - sd['LScore']
 
@@ -60,11 +71,8 @@ def feat(df):
 td = feat(td)
 ss = feat(ss)
 
-print(type(td))
-print(type(ss))
-print(td.head(10))
-print(ss.head(10))
-
+# Linear Regression
+print('=== Linear Regression ===')
 cols = ['T1ScoreDiff','T2ScoreDiff','T1WinRate','T2WinRate','T1Seed','T2Seed']
 def get_train_test(df, test_season):
     train_df = df.loc[df['Season']!=test_season, cols+['target']]
@@ -72,26 +80,56 @@ def get_train_test(df, test_season):
     return train_df, test_df
 
 seasons = [2015, 2016, 2017, 2018, 2019]
+total_loss = 0
 for season in seasons:
-    train, test = get_train_test(td, season)
-    print(season)
-    print(train)
-    print(test)
+    print('Training by: ', season, ' with resulting loss: ', end='')
+    train, test = get_train_test(td, season) # [1323, 7] [63, 7]
+    
+    train_x, train_y = train.drop('target', axis=1), train['target']
+    train_x, train_y = train_x.to_numpy(), train_y.to_numpy()
+    
+    w = np.zeros(len(train_x[0]))
+    l_rate = 20
+    repeat = 100000
+    prev_grad = np.zeros(len(train_x[0]))
+    train_x_t = train_x.transpose()
 
-'''
-for season in seasons:
-    train, test = get_train_test(td, season)
-    model.fit(train.drop('target', axis=1), train['target'])
-    pred = model.predict(test.drop('target', axis=1))
-    loss = log_loss(test['target'], pred)
-    print(season, loss)
-    gloss += loss
+    for i in range(repeat):
+        tmp = np.dot(train_x, w)
+        loss = tmp - train_y
+        grad = 2 * np.dot(train_x_t, loss)
+        prev_grad += grad ** 2
+        ada = np.sqrt(prev_grad)
+        w -= l_rate * grad / ada
 
-print('average', gloss/len(seasons))
+    test_x, test_y = test.drop('target', axis=1).to_numpy(), test['target'].to_numpy()
+    pred = np.dot(test_x, w)
+    loss = np.absolute(pred - test_y)
+    total_loss += np.sum(loss) / len(loss)
+    print(np.sum(loss) / len(loss))
 
-model.fit(td[cols], td['target'])
-pred = model.predict(ss[cols])
+print('Average', total_loss / len(seasons), end='\n\n')
+
+# Prediction
+print('=== Prediction ===')
+x, y = td[cols].to_numpy(), td['target'].to_numpy()
+w = np.zeros(len(x[0]))
+l_rate = 10
+repeat = 10000
+prev_grad = np.zeros(len(train_x[0]))
+x_t = x.transpose()
+
+for i in range(repeat):
+    tmp = np.dot(x, w)
+    loss = tmp - y
+    grad = 2 * np.dot(x_t, loss)
+    prev_grad += grad ** 2
+    ada = np.sqrt(prev_grad)
+    w -= l_rate * grad / ada
+
+xx = ss[cols].to_numpy()
+pred = np.dot(xx, w)
+pred[pred<0.5] = 0
 ss['Pred'] = pred.clip(0, 1)
-ss.to_csv('submission.csv', columns=['ID','Pred'], index=None)
-ss
-'''
+print(ss.head(10))
+ss.to_csv('regression.csv', columns=['ID','Pred'], index=None)
