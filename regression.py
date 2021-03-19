@@ -4,9 +4,11 @@ import random
 
 # Read Data
 print('=== ReadData ===')
-prefix = 'Data/'
+prefix = 'Data/WDataFiles_Stage1'
+#prefix = 'Data/WDataFiles_Stage2'
 dt = {'WTeamID':'str', 'LTeamID':'str'}
-ss = pd.read_csv(prefix + 'WSampleSubmissionStage1.csv')
+#ss = pd.read_csv(prefix + 'WSampleSubmissionStage1.csv')
+ss = pd.read_csv(prefix + 'WSampleSubmissionStage2.csv')
 sd1 = pd.read_csv(prefix + 'WRegularSeasonCompactResults.csv', dtype=dt)
 sd2 = pd.read_csv(prefix + 'WRegularSeasonDetailedResults.csv', dtype=dt)
 sd2 = sd2.drop(['WFGM', 'WFGA', 'WFGM3', 'WFGA3', 'WFTM', 'WFTA', 'WOR', 'WDR', 'WAst', 'WTO', 'WStl', 'WBlk', 'WPF'], axis=1)
